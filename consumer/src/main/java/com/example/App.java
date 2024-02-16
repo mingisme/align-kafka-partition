@@ -2,21 +2,21 @@ package com.example;
 
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
-import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.StringDeserializer;
-import org.apache.kafka.common.serialization.StringSerializer;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
-import org.springframework.kafka.core.*;
+import org.springframework.kafka.config.KafkaListenerEndpointRegistry;
+import org.springframework.kafka.core.ConsumerFactory;
+import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
 import org.springframework.kafka.listener.ConsumerAwareRebalanceListener;
 
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -58,32 +58,29 @@ public class App {
         return factory;
     }
 
-    @KafkaListener(id="t1Listener", topics = "t1")
+    @KafkaListener(id = "t1Listener", topics = "t1")
     public void listenT1(String message) {
         System.out.println("Received message from t1: " + message);
     }
 
-    @KafkaListener(id="t2Listener", topics = "t2")
+    @KafkaListener(id="t2Listener", topicPartitions = @org.springframework.kafka.annotation.TopicPartition(topic="t2",partitions = "0"))
     public void listenT2(String message) {
         System.out.println("Received message from t2: " + message);
     }
 
+    @Autowired
+    private KafkaListenerEndpointRegistry consumerRegistry;
+
+    @Autowired
+    private ConcurrentKafkaListenerContainerFactory<String, String> factory;
+
     private class CustomRebalanceListener implements ConsumerAwareRebalanceListener {
         @Override
         public void onPartitionsAssigned(Consumer<?, ?> consumer, Collection<TopicPartition> partitions) {
-            Map<Integer, Integer> partitionMapping = mapPartitions(partitions.size());
-//            partitions.forEach(partition -> {
-//                int correspondingPartition = partitionMapping.get(partition.partition());
-//                consumer.assign(Collections.singletonList(new TopicPartition("t2", correspondingPartition)));
-//            });
-        }
+            System.out.println(partitions);
 
-        private Map<Integer, Integer> mapPartitions(int numPartitions) {
-            Map<Integer, Integer> mapping = new HashMap<>();
-            for (int i = 0; i < numPartitions; i++) {
-                mapping.put(i, i);
-            }
-            return mapping;
+            System.out.println("Assigned partitions: " + partitions);
+
         }
     }
 
